@@ -27,7 +27,7 @@ func TestFAME(t *testing.T) {
 	// create a new FAME struct with the universe of attributes
 	// denoted by integer
 	a := abe.NewFAME()
-
+	random := "helloworldfsdfsd"
 	// generate a public key and a secret key for the scheme
 	pubKey, secKey, err := a.GenerateMasterKeys()
 	if err != nil {
@@ -55,7 +55,7 @@ func TestFAME(t *testing.T) {
 
 	// encrypt the message msg with the decryption policy specified by the
 	// msp structure
-	cipher, err := a.Encrypt(msg, msp, pubKey)
+	cipher, err := a.Encrypt(random, msg, msp, pubKey)
 	if err != nil {
 		t.Fatalf("Failed to encrypt: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestFAME(t *testing.T) {
 
 	// encrypt the message msg with the decryption policy specified by the
 	// msp structure
-	cipherSingleCondition, err := a.Encrypt(msg, mspSingleCondition, pubKey)
+	cipherSingleCondition, err := a.Encrypt(random, msg, mspSingleCondition, pubKey)
 	if err != nil {
 		t.Fatalf("Failed to encrypt: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestFAME(t *testing.T) {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
 
-	cipherSingleUUID, err := a.Encrypt(msg, mspSingleUUID, pubKey)
+	cipherSingleUUID, err := a.Encrypt(random, msg, mspSingleUUID, pubKey)
 	if err != nil {
 		t.Fatalf("Failed to encrypt: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestFAME(t *testing.T) {
 		t.Fatalf("Failed to generate the policy: %v", err)
 	}
 
-	cipherMultiUUID, err := a.Encrypt(msg, mspMultiUUID, pubKey)
+	cipherMultiUUID, err := a.Encrypt(random, msg, mspMultiUUID, pubKey)
 	if err != nil {
 		t.Fatalf("Failed to encrypt: %v", err)
 	}
