@@ -17,6 +17,7 @@
 package abe
 
 import (
+	"bytes"
 	"math/big"
 
 	"fmt"
@@ -24,7 +25,6 @@ import (
 
 	"crypto/aes"
 	cbc "crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
 
 	"io"
@@ -109,11 +109,14 @@ type FAMECipher struct {
 // returns an encryption of the message. In case of a failed procedure an error
 // is returned. Note that safety of the encryption is only proved if the mapping
 // msp.RowToAttrib from the rows of msp.Mat to attributes is injective.
-func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
-	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0 {
+func (a *FAME) Encrypt(random, msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error) {
+	if len(msp.Mat) == 0 || len(msp.Mat[0]) == 0{
 		return nil, fmt.Errorf("empty msp matrix")
 	}
 
+	if len(random) != 16 {
+		return nil, fmt.Errorf("random string must be 16 bytes")
+	}
 	attrib := make(map[string]bool)
 	for _, i := range msp.RowToAttrib {
 		if attrib[i] {
@@ -125,10 +128,11 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 
 	// msg is encrypted using CBC, with a random key that is encapsulated
 	// with FAME
-	_, keyGt, err := bn256.RandomGT(rand.Reader)
+	keyGt, err := bn256.MapStringToGT(random)
 	if err != nil {
 		return nil, err
 	}
+
 	keyCBC := sha256.Sum256([]byte(keyGt.String()))
 
 	c, err := aes.NewCipher(keyCBC[:])
@@ -137,7 +141,7 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	}
 
 	iv := make([]byte, c.BlockSize())
-	_, err = io.ReadFull(rand.Reader, iv)
+	_, err = io.ReadFull(bytes.NewBufferString(random), iv)
 	if err != nil {
 		return nil, err
 	}
@@ -156,12 +160,8 @@ func (a *FAME) Encrypt(msg string, msp *MSP, pk *FAMEPubKey) (*FAMECipher, error
 	symEnc := make([]byte, len(msgPad))
 	encrypterCBC.CryptBlocks(symEnc, msgPad)
 
-	// encapsulate the key with FAME
-	sampler := sample.NewUniform(a.P)
-	s, err := data.NewRandomVector(2, sampler)
-	if err != nil {
-		return nil, err
-	}
+	s := data.NewConstantVector(2, big.NewInt(0))
+
 	ct0 := [3]*bn256.G2{new(bn256.G2).ScalarMult(pk.PartG2[0], s[0]),
 		new(bn256.G2).ScalarMult(pk.PartG2[1], s[1]),
 		new(bn256.G2).ScalarBaseMult(new(big.Int).Add(s[0], s[1]))}
@@ -230,14 +230,8 @@ type FAMEAttribKeys struct {
 // with a policy for which attributes gamma are sufficient.
 func (a *FAME) GenerateAttribKeys(gamma []string, sk *FAMESecKey) (*FAMEAttribKeys, error) {
 	sampler := sample.NewUniform(a.P)
-	r, err := data.NewRandomVector(2, sampler)
-	if err != nil {
-		return nil, err
-	}
-	sigma, err := data.NewRandomVector(len(gamma), sampler)
-	if err != nil {
-		return nil, err
-	}
+	r := data.NewConstantVector(2, big.NewInt(0))
+	sigma := data.NewConstantVector(len(gamma), big.NewInt(0))
 
 	pow0 := new(big.Int).Mul(sk.PartInt[2], r[0])
 	pow0.Mod(pow0, a.P)
